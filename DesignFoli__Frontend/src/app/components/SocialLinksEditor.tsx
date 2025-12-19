@@ -1,0 +1,406 @@
+// components/profile/SocialLinksEditor.tsx
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useApiClient } from "@/utils/api";
+import { showToast } from "@/lib/toast";
+import { UserInfo } from "../../../types/general"; // Adjust path as needed
+
+// Define SocialLinks type
+interface SocialLinks {
+  twitter?: string;
+  linkedin?: string;
+  github?: string;
+  dribbble?: string;
+  instagram?: string;
+  behance?: string;
+}
+
+interface SocialLinksEditorProps {
+  publicProfile?: boolean;
+  userInfo: UserInfo | null;
+  onUserInfoUpdate?: () => void;
+}
+
+// Function to get social media icon based on platform
+// I've changed the className to 'text-white' to be visible on your footer
+const getSocialIcon = (platform: string) => {
+  const iconSize = 20; // Changed to 20 for footer
+  const iconColor = "#FFFFFF"; // Changed to white
+
+  switch (platform.toLowerCase()) {
+    case "twitter":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={iconSize}
+          height={iconSize}
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          className="text-white"
+        >
+          <path d="M22.46 6c-.77.35-1.6.59-2.47.7a4.3 4.3 0 0 0 1.88-2.37c-.83.5-1.75.87-2.72 1.07A4.28 4.28 0 0 0 12 9.03c0 .34.04.67.1.99C8.09 9.86 4.84 8.13 2.67 5.44c-.37.64-.58 1.39-.58 2.19 0 1.51.77 2.85 1.94 3.63-.72-.02-1.4-.22-1.99-.55v.06c0 2.11 1.5 3.87 3.5 4.27-.37.1-.76.16-1.16.16-.28 0-.55-.03-.81-.08.55 1.72 2.16 2.97 4.07 3a8.6 8.6 0 0 1-5.32 1.84c-.35 0-.7-.02-1.04-.06A12.13 12.13 0 0 0 8.29 21c7.55 0 11.69-6.26 11.69-11.69 0-.18-.01-.36-.02-.54A8.18 8.18 0 0 0 24 4.59a8.36 8.36 0 0 1-2.54.7z" />
+        </svg>
+      );
+    case "linkedin":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={iconSize}
+          height={iconSize}
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          className="text-white"
+        >
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+        </svg>
+      );
+    case "github":
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={iconSize}
+          height={iconSize}
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          className="text-white"
+        >
+          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+        </svg>
+      );
+    // ... Add other cases for dribbble, instagram, behance ...
+    default:
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={iconSize}
+          height={iconSize}
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          className="text-white"
+        >
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+        </svg>
+      );
+  }
+};
+
+const SocialLinksEditor = ({
+  publicProfile = false,
+  userInfo,
+  onUserInfoUpdate,
+}: SocialLinksEditorProps) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const apiClient = useApiClient();
+
+  // Social links state
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({
+    twitter: userInfo?.profile?.socialLinks?.twitter || "",
+    linkedin: userInfo?.profile?.socialLinks?.linkedin || "",
+    github: userInfo?.profile?.socialLinks?.github || "",
+    dribbble: userInfo?.profile?.socialLinks?.dribbble || "",
+    instagram: userInfo?.profile?.socialLinks?.instagram || "",
+    behance: userInfo?.profile?.socialLinks?.behance || "",
+  });
+  const [isSavingSocialLinks, setIsSavingSocialLinks] = useState(false);
+
+  // Handle social link changes
+  const handleSocialLinkChange = (
+    platform: keyof SocialLinks,
+    value: string
+  ) => {
+    setSocialLinks((prev) => ({
+      ...prev,
+      [platform]: value,
+    }));
+  };
+
+  // Save social links to API
+  const saveSocialLinks = async () => {
+    setIsSavingSocialLinks(true);
+    try {
+      // Filter out empty links
+      const linksToSave = Object.fromEntries(Object.entries(socialLinks));
+      await apiClient.put("/api/v1/users/profile/social-links", linksToSave);
+      showToast.success("Social links saved successfully!");
+      setIsModalOpen(false); // Close modal
+
+      // Refresh user data
+      if (onUserInfoUpdate) {
+        onUserInfoUpdate();
+      }
+    } catch (error) {
+      console.error("Error saving social links:", error);
+      showToast.error("Failed to save social links. Please try again.");
+    } finally {
+      setIsSavingSocialLinks(false);
+    }
+  };
+
+  const hasLinks = Object.values(socialLinks).some((link) => !!link);
+
+  return (
+    <>
+      <div className="flex flex-col items-center justify-center text-center w-full">
+        {/* Display existing social links */}
+        <div className="flex justify-center items-center gap-4 flex-wrap w-full">
+          {Object.entries(socialLinks).map(([platform, url]) => {
+            if (!url) return null;
+            return (
+              <a
+                key={platform}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={platform}
+                className="text-white hover:text-gray-300 transition-colors"
+              >
+                {getSocialIcon(platform)}
+              </a>
+            );
+          })}
+          {!hasLinks && (
+            <p className="text-gray-300 text-sm italic text-center py-4 w-full">
+              No social media links added yet.
+            </p>
+          )}
+        </div>
+
+        {!publicProfile && (
+          <div className="flex justify-center mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              // Updated styles for dark footer
+              className="rounded-full border-white text-white hover:bg-white/10 hover:text-white cursor-pointer"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mr-1"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Add Media Link
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Social Media Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Social Media Links</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Twitter */}
+            <div className=" flex items-center gap-2 ">
+              <Label
+                htmlFor="twitter"
+                className="flex items-center gap-2 border h-9  px-3 rounded-md  bg-transparent py-1 text-base shadow-xs w-48"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  className="text-[#000000]"
+                >
+                  <path d="M22.46 6c-.77.35-1.6.59-2.47.7a4.3 4.3 0 0 0 1.88-2.37c-.83.5-1.75.87-2.72 1.07A4.28 4.28 0 0 0 12 9.03c0 .34.04.67.1.99C8.09 9.86 4.84 8.13 2.67 5.44c-.37.64-.58 1.39-.58 2.19 0 1.51.77 2.85 1.94 3.63-.72-.02-1.4-.22-1.99-.55v.06c0 2.11 1.5 3.87 3.5 4.27-.37.1-.76.16-1.16.16-.28 0-.55-.03-.81-.08.55 1.72 2.16 2.97 4.07 3a8.6 8.6 0 0 1-5.32 1.84c-.35 0-.7-.02-1.04-.06A12.13 12.13 0 0 0 8.29 21c7.55 0 11.69-6.26 11.69-11.69 0-.18-.01-.36-.02-.54A8.18 8.18 0 0 0 24 4.59a8.36 8.36 0 0 1-2.54.7z" />
+                </svg>
+                Twitter
+              </Label>
+              <Input
+                id="twitter"
+                placeholder="https://twitter.com/username"
+                value={socialLinks.twitter || ""}
+                onChange={(e) =>
+                  handleSocialLinkChange("twitter", e.target.value)
+                }
+              />
+            </div>
+
+            {/* LinkedIn */}
+            <div className=" flex items-center gap-2">
+              <Label
+                htmlFor="linkedin"
+                className="flex items-center gap-2 border h-9  px-3 rounded-md  bg-transparent py-1 text-base shadow-xs w-48"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  className="text-[#000000]"
+                >
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                </svg>
+                LinkedIn
+              </Label>
+              <Input
+                id="linkedin"
+                placeholder="https://linkedin.com/in/username"
+                value={socialLinks.linkedin || ""}
+                onChange={(e) =>
+                  handleSocialLinkChange("linkedin", e.target.value)
+                }
+              />
+            </div>
+
+            {/* GitHub */}
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="github"
+                className="flex items-center gap-2 border h-9  px-3 rounded-md  bg-transparent py-1 text-base shadow-xs w-48"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  className="text-[#000000]"
+                >
+                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                </svg>
+                GitHub
+              </Label>
+              <Input
+                id="github"
+                placeholder="https://github.com/username"
+                value={socialLinks.github || ""}
+                onChange={(e) =>
+                  handleSocialLinkChange("github", e.target.value)
+                }
+              />
+            </div>
+
+            {/* Dribbble */}
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="dribbble"
+                className="flex items-center gap-2 border h-9  px-3 rounded-md  bg-transparent py-1 text-base shadow-xs w-48"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  className="text-[#000000]"
+                >
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm9.568 5.302c.26.646.422 1.332.422 2.058 0 .337-.034.665-.092.987-.31-.092-.678-.17-1.097-.232-1.448-.211-3.126-.211-4.574 0-.421.062-.787.14-1.097.232-.058-.322-.092-.65-.092-.987 0-.726.162-1.412.422-2.058C7.835 3.827 9.783 2.5 12 2.5s4.165 1.327 5.568 2.802z" />
+                </svg>
+                Dribbble
+              </Label>
+              <Input
+                id="dribbble"
+                placeholder="https://dribbble.com/username"
+                value={socialLinks.dribbble || ""}
+                onChange={(e) =>
+                  handleSocialLinkChange("dribbble", e.target.value)
+                }
+              />
+            </div>
+
+            {/* Instagram */}
+            <div className=" flex items-center gap-2">
+              <Label
+                htmlFor="instagram"
+                className="flex items-center gap-2 border h-9  px-3 rounded-md  bg-transparent py-1 text-base shadow-xs w-48"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  className="text-[#000000]"
+                >
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                </svg>
+                Instagram
+              </Label>
+              <Input
+                id="instagram"
+                placeholder="https://instagram.com/username"
+                value={socialLinks.instagram || ""}
+                onChange={(e) =>
+                  handleSocialLinkChange("instagram", e.target.value)
+                }
+              />
+            </div>
+
+            {/* Behance */}
+            <div className=" flex items-center gap-2">
+              <Label
+                htmlFor="behance"
+                className="flex items-center gap-2 border h-9  px-3 rounded-md  bg-transparent py-1 text-base shadow-xs w-48"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  className="text-[#000000]"
+                >
+                  <path d="M22 7h-7v-2h7v2zm1.726 10c-.442 1.297-2.029 2-5.101 2-3.074 0-5.564-1.729-5.564-5.675 0-3.91 2.325-5.92 5.466-5.92 3.082 0 4.964 1.782 5.375 4.426.078.506.109 1.188.095 2.14h-8.027c.13 3.211 3.483 3.312 4.588 2.029h3.168zm-7.686-4h4.965c-.105-1.547-1.136-2.219-2.477-2.219-1.466 0-2.277.768-2.488 2.219zm-9.574 6.988h-6.466v-14.967h6.953c5.476.081 5.58 5.444 2.72 6.906 3.461 1.26 3.577 8.061-3.207 8.061zm-3.466-8.988h3.584c2.508 0 2.906-3-.312-3h-3.272v3zm3.391 3h-3.391v3.016h3.341c3.055 0 2.868-3.016.05-3.016z" />
+                </svg>
+                Behance
+              </Label>
+              <Input
+                id="behance"
+                placeholder="https://behance.net/username"
+                value={socialLinks.behance || ""}
+                onChange={(e) =>
+                  handleSocialLinkChange("behance", e.target.value)
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <div className="flex gap-3 w-full">
+              <Button
+                onClick={saveSocialLinks}
+                disabled={isSavingSocialLinks}
+                className="flex-1"
+              >
+                {isSavingSocialLinks ? "Saving..." : "Save Links"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isSavingSocialLinks}
+              >
+                Cancel
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+export default SocialLinksEditor;
